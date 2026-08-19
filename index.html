@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مدنی چینل — Madani Channel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --emerald-1:#04231a;
+    --gold:#d4af37;
+    --gold-2:#f4d675;
+    --cream:#fbf3df;
+    --muted:#a9c4b6;
+    --line:rgba(212,175,55,0.22);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:#04231a;
+    color:var(--cream);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:5vh 4vw;
+    position:relative;
+    overflow:hidden;
+  }
+  .urdu{ font-family:'Noto Nastaliq Urdu','Inter',sans-serif; }
+
+  /* slow rotating geometric backdrop, very subtle */
+  .backdrop{
+    position:fixed; inset:-20%;
+    z-index:0;
+    opacity:0.5;
+    background-image:
+      repeating-linear-gradient(45deg, rgba(212,175,55,0.05) 0 2px, transparent 2px 46px),
+      repeating-linear-gradient(-45deg, rgba(212,175,55,0.05) 0 2px, transparent 2px 46px);
+    animation: rotateBg 220s linear infinite;
+  }
+  @keyframes rotateBg{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
+
+  body::after{
+    content:"";
+    position:fixed; inset:0; z-index:0;
+    background:radial-gradient(1200px 700px at 50% 0%, rgba(212,175,55,0.10), transparent 60%);
+  }
+
+  .stage{
+    position:relative; z-index:2;
+    width:100%; max-width:900px;
+    display:flex; flex-direction:column; align-items:center;
+  }
+
+  /* remote-style crescent toggle */
+  .lang-toggle{ display:flex; gap:16px; margin-bottom:30px; }
+  .lang-btn{
+    display:flex; align-items:center; gap:9px;
+    padding:11px 26px; border-radius:999px;
+    border:1px solid var(--line);
+    background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(0,0,0,0.15));
+    color:var(--muted); font-size:15px; cursor:pointer;
+    transition:all .2s ease;
+    box-shadow:inset 0 1px 1px rgba(255,255,255,0.06), 0 6px 14px -8px rgba(0,0,0,0.6);
+  }
+  .lang-btn svg{ width:16px; height:16px; opacity:0.55; transition:opacity .2s ease; }
+  .lang-btn.active{
+    background:linear-gradient(150deg, var(--gold-2), var(--gold));
+    color:#1a1400; font-weight:700; border-color:transparent;
+    box-shadow:0 10px 24px -8px rgba(212,175,55,0.65), inset 0 1px 1px rgba(255,255,255,0.5);
+  }
+  .lang-btn.active svg{ opacity:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
+
+  /* ---------------- TV SET with bias lighting ---------------- */
+  .tv-wrap{ position:relative; width:100%; }
+  .bias-glow{
+    position:absolute; inset:-40px -30px -60px;
+    z-index:-1;
+    border-radius:40px;
+    background: radial-gradient(ellipse at 50% 40%, var(--glow-color, rgba(20,160,110,0.55)), transparent 68%);
+    filter:blur(38px);
+    opacity:0.85;
+    transition: background 0.6s ease;
+  }
+
+  .tv{
+    width:100%; position:relative;
+    padding:22px 22px 0;
+    border-radius:26px;
+    background:
+      repeating-linear-gradient(100deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px),
+      linear-gradient(155deg, #333333, #131313 55%, #050505);
+    box-shadow:
+      0 44px 90px -30px rgba(0,0,0,0.9),
+      inset 0 2px 2px rgba(255,255,255,0.09),
+      inset 0 -6px 14px rgba(0,0,0,0.65);
+    border:1px solid rgba(255,255,255,0.07);
+  }
+  .tv::after{
+    content:"";
+    position:absolute; top:9px; left:50%; transform:translateX(-50%);
+    width:60px; height:3px; border-radius:4px;
+    background:linear-gradient(90deg, transparent, var(--gold-2), transparent);
+    opacity:0.6;
+  }
+  .screen-frame{
+    border-radius:14px; padding:10px;
+    background:linear-gradient(160deg, #050505, #000);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.04);
+  }
+  .screen{
+    position:relative; border-radius:8px; overflow:hidden; background:#000;
+  }
+  video{ width:100%; display:block; aspect-ratio:16/9; background:#000; }
+
+  /* CRT scanlines + glare */
+  .scanlines{
+    position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 3px);
+    mix-blend-mode:multiply;
+    opacity:0.35;
+  }
+  .glare{
+    position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(120deg, rgba(255,255,255,0.10) 0%, transparent 30%);
+  }
+  .vignette{
+    position:absolute; inset:0; pointer-events:none;
+    box-shadow:inset 0 0 90px 20px rgba(0,0,0,0.5);
+  }
+  .power-dot{
+    position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+    width:6px;height:6px;border-radius:50%; background:#4ade80;
+    box-shadow:0 0 6px 2px rgba(74,222,128,0.7); z-index:3;
+  }
+
+  /* static flicker overlay for channel switch */
+  .static{
+    position:absolute; inset:0; z-index:5;
+    background:
+      repeating-conic-gradient(#fff 0% 0.5%, #000 0.5% 1%);
+    opacity:0; pointer-events:none;
+  }
+  .static.flash{
+    animation: flick 0.45s steps(6);
+  }
+  @keyframes flick{
+    0%{ opacity:0.9; }
+    50%{ opacity:0.5; }
+    100%{ opacity:0; }
+  }
+
+  .bezel-bottom{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 6px 16px;
+  }
+  .now-playing{ display:flex; align-items:center; gap:8px; font-size:14px; color:var(--muted); }
+  .dot{
+    width:8px;height:8px;border-radius:50%; background:var(--gold-2);
+    box-shadow:0 0 0 0 rgba(244,214,117,0.7);
+    animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(244,214,117,0.55); }
+    70%{ box-shadow:0 0 0 9px rgba(244,214,117,0); }
+    100%{ box-shadow:0 0 0 0 rgba(244,214,117,0); }
+  }
+  .grille{ display:flex; gap:4px; }
+  .grille span{ width:4px;height:4px;border-radius:50%; background:rgba(255,255,255,0.15); }
+
+  .stand{
+    display:flex; justify-content:space-between; width:78%; margin:0 auto;
+    position:relative; top:-1px;
+  }
+  .leg{
+    width:14px; height:46px;
+    background:linear-gradient(180deg, #333, #0a0a0a);
+    clip-path:polygon(20% 0, 80% 0, 100% 100%, 0% 100%);
+    box-shadow:0 14px 18px -8px rgba(0,0,0,0.6);
+  }
+  .base-shadow{
+    width:60%; height:16px; margin:6px auto 0;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0.55), transparent 70%);
+  }
+
+  .status{ margin-top:20px; font-size:12px; color:var(--muted); text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="backdrop"></div>
+
+<div class="stage">
+  <div class="lang-toggle">
+    <div class="lang-btn active" data-lang="ur" onclick="selectLang('ur', this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 5.3 18.5A8.5 8.5 0 0 1 12 2Z"/></svg>
+      اردو
+    </div>
+    <div class="lang-btn" data-lang="en" onclick="selectLang('en', this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 5.3 18.5A8.5 8.5 0 0 1 12 2Z"/></svg>
+      English
+    </div>
+  </div>
+
+  <div class="tv-wrap">
+    <div class="bias-glow" id="biasGlow"></div>
+    <div class="tv">
+      <div class="screen-frame">
+        <div class="screen">
+          <video id="player" controls playsinline></video>
+          <div class="scanlines"></div>
+          <div class="glare"></div>
+          <div class="vignette"></div>
+          <div class="power-dot"></div>
+          <div class="static" id="staticOverlay"></div>
+        </div>
+      </div>
+      <div class="bezel-bottom">
+        <div class="now-playing"><span class="dot" id="liveDot" style="display:none;"></span><span id="nowPlaying" class="urdu">مدنی چینل اردو</span></div>
+        <div class="grille"><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="stand">
+      <div class="leg"></div>
+      <div class="leg"></div>
+    </div>
+    <div class="base-shadow"></div>
+  </div>
+
+  <div class="status" id="status">براہ راست نشر ہو رہا ہے</div>
+</div>
+
+<script>
+const CHANNELS = [
+  { lang:"ur", name:"مدنی چینل اردو", url:"https://streaming.madanichannel.tv/static/streaming-playlists/hls/b9790f10-cb0d-4e30-82bf-84a756234e58/master.m3u8", glow:"rgba(20,160,110,0.55)" },
+  { lang:"en", name:"Madani Channel English", url:"https://streaming.madanichannel.tv/static/streaming-playlists/hls/c6a600b0-82cb-454a-8953-2bb2bb372edc/master.m3u8", glow:"rgba(212,175,55,0.5)" },
+];
+
+const video = document.getElementById('player');
+const nowPlaying = document.getElementById('nowPlaying');
+const statusEl = document.getElementById('status');
+const liveDot = document.getElementById('liveDot');
+const biasGlow = document.getElementById('biasGlow');
+const staticOverlay = document.getElementById('staticOverlay');
+let hls = null;
+
+function selectLang(lang, btn){
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const ch = CHANNELS.find(c => c.lang === lang);
+  if (ch) playChannel(ch);
+}
+
+function playChannel(ch){
+  // static flicker transition
+  staticOverlay.classList.remove('flash');
+  void staticOverlay.offsetWidth; // reflow to restart animation
+  staticOverlay.classList.add('flash');
+
+  biasGlow.style.setProperty('--glow-color', ch.glow);
+  biasGlow.style.background = `radial-gradient(ellipse at 50% 40%, ${ch.glow}, transparent 68%)`;
+
+  nowPlaying.textContent = ch.name;
+  liveDot.style.display = 'inline-block';
+  statusEl.textContent = 'لوڈ ہو رہا ہے...';
+
+  if (hls) { hls.destroy(); hls = null; }
+
+  if (Hls.isSupported()) {
+    hls = new Hls();
+    hls.loadSource(ch.url);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      video.play().catch(()=>{});
+      statusEl.textContent = 'براہ راست نشر ہو رہا ہے';
+    });
+    hls.on(Hls.Events.ERROR, (event, data) => {
+      if (data.fatal) statusEl.textContent = 'سٹریم لوڈ نہیں ہو سکا — لنک عارضی طور پر بند ہو سکتا ہے';
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = ch.url;
+    video.addEventListener('loadedmetadata', () => {
+      video.play().catch(()=>{});
+      statusEl.textContent = 'براہ راست نشر ہو رہا ہے';
+    });
+  } else {
+    statusEl.textContent = 'آپ کا براؤزر یہ سٹریم فارمیٹ سپورٹ نہیں کرتا';
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  playChannel(CHANNELS[0]);
+});
+</script>
+
+</body>
+</html>
